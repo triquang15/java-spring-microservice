@@ -1,10 +1,10 @@
 package com.triquang.patientmanagement.mapper;
 
+import java.time.LocalDate;
+
 import com.triquang.patientmanagement.dto.PatientRequestDTO;
 import com.triquang.patientmanagement.dto.PatientResponseDTO;
 import com.triquang.patientmanagement.model.Patient;
-
-import java.time.LocalDate;
 
 public class PatientMapper {
     public static PatientResponseDTO toDTO(Patient patient) {
