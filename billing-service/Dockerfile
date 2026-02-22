@@ -1,32 +1,34 @@
 # =========================
-# Stage 1: Build with Maven
+# Stage 1: Build
 # =========================
 FROM maven:3.9.9-eclipse-temurin-21 AS builder
 
 WORKDIR /app
 
-# Copy pom first for dependency cache
+# Copy pom.xml first for caching
 COPY pom.xml .
+RUN mvn -B -q dependency:go-offline
 
-RUN mvn -B dependency:go-offline
-
-# Copy source code
+# Copy source
 COPY src ./src
 
-# Build jar (skip tests if needed)
+# Package
 RUN mvn -B clean package -DskipTests
 
 
 # =========================
-# Stage 2: Run application
+# Stage 2: Runtime
 # =========================
 FROM eclipse-temurin:21-jre
 
 WORKDIR /app
 
-COPY --from=builder /app/target/billing-service-0.0.1-SNAPSHOT.jar app.jar
+# Create non-root user (security best practice)
+RUN addgroup --system spring && adduser --system spring --ingroup spring
+USER spring:spring
+
+COPY --from=builder /app/target/*.jar app.jar
 
 EXPOSE 4001
-EXPOSE 9001
 
-ENTRYPOINT ["java", "-jar", "app.jar"]
+ENTRYPOINT ["java","-XX:+UseContainerSupport","-XX:MaxRAMPercentage=75.0","-jar","app.jar"]

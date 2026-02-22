@@ -5,6 +5,7 @@ import com.triquang.patientmanagement.dto.PatientResponseDTO;
 import com.triquang.patientmanagement.exception.EmailAlreadyExistsException;
 import com.triquang.patientmanagement.exception.PatientNotFoundException;
 import com.triquang.patientmanagement.grpc.BillingServiceGrpcClient;
+import com.triquang.patientmanagement.kafka.KafkaProducer;
 import com.triquang.patientmanagement.mapper.PatientMapper;
 import com.triquang.patientmanagement.model.Patient;
 import com.triquang.patientmanagement.repository.PatientRepository;
@@ -20,8 +21,10 @@ public class PatientService {
     private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(PatientService.class);
     private final PatientRepository patientRepository;
     private final BillingServiceGrpcClient billingServiceGrpcClient;
+    private final KafkaProducer kafkaProducer;
 
-    public PatientService(PatientRepository patientRepository, BillingServiceGrpcClient billingServiceGrpcClient) {
+    public PatientService(PatientRepository patientRepository, BillingServiceGrpcClient billingServiceGrpcClient, KafkaProducer kafkaProducer) {
+        this.kafkaProducer = kafkaProducer;
         this.billingServiceGrpcClient = billingServiceGrpcClient;
         this.patientRepository = patientRepository;
     }
@@ -47,6 +50,12 @@ public class PatientService {
             );
         } catch (Exception e) {
             log.error("Failed to create billing account", e);
+        }
+
+        try {
+            kafkaProducer.sendPatientEvent(newPatient);
+        } catch (Exception e) {
+            log.error("Failed to send patient event to Kafka", e);
         }
 
         log.info("Created patient with id " + newPatient.getId().toString());
